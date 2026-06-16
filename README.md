@@ -67,8 +67,8 @@ This POC uses the [uv](https://docs.astral.sh/uv/) python project management too
 - cd to ewxndfd directory
 - to use the package, build using `uv build` which will create a wheel file in the dist/ directory
   and see instructions above for using in your project with a virtual environment
-- to contribute/edit code, try running `uv run test:pytest` which should create  
-  a virtual environment named 'test' and run pytest in that environment.
+- to contribute/edit code, try running `uv run pytest` which will create a virtual environment in .venv if needed
+  <!-- which should create a virtual environment named 'test' and run pytest in that environment. -->
 - some Enviroweather-specific tests require access to sample data, which are not included in this repository. 
   The location of there example files is currently hardcoded in the text code, along with the expected dates to check
   based on the files present.   
