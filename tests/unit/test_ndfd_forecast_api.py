@@ -45,6 +45,35 @@ def is_numeric(obj):
     attrs = ['__add__', '__sub__', '__mul__', '__truediv__', '__pow__']
     return all(hasattr(obj, attr) for attr in attrs)
 
+def test_units_parameter(lat_lon):
+    
+    lat, lon = lat_lon
+
+    test_units_value = "metric"
+    df_metric = ndfd.daily_forecast_summary(lat = lat, lon = lon, units = test_units_value)
+    assert isinstance(df_metric , pd.DataFrame)
+
+    test_units_value = "us"
+    df_us = ndfd.daily_forecast_summary(lat = lat, lon = lon, units = test_units_value)
+    assert isinstance(df_us , pd.DataFrame)
+
+    # the column names from NDFD include the units 
+    temperature_columns = [
+            ("Daily Minimum Temperature (Celsius)","Daily Minimum Temperature (Fahrenheit)"),
+            ("Daily Maximum Temperature (Celsius)", "Daily Maximum Temperature (Fahrenheit)")
+            ]
+    
+    for temp_column in temperature_columns:
+        temp_metric = float(df_metric.loc[0,temp_column[0]])
+        temp_us = float(df_us.loc[0,temp_column[1]])
+    
+        assert isinstance(temp_metric, float)
+        assert isinstance(temp_us, float)
+    
+        temp_diff = abs(temp_us - ((temp_metric * 1.8) + 33) )
+        assert  temp_diff < 2
+    
+    
 def test_daily_forecast_summary_using_sample_xml(lat_lon):
     
     lat, lon = lat_lon

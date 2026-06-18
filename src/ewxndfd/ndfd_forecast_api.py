@@ -12,14 +12,42 @@ from datetime import date # , timedelta, datetime
 
 from os import getenv
 
+# configuration/constants
 # this is set a import time
 DEFAULT_USER_AGENT = getenv('NDFD_USER_AGENT', '(enviroweather.msu.edu, ewx@enviroweather.msu.edu)') 
 # for testing
-LANSING_LAT_LON = (42.73, -84.55)  # approximate lat/lon for Lansing, MI
+LANSING_LAT_LON = (42.78, -84.6)  # approximate lat/lon for Lansing, MI
+UNITS_METRIC='m'
+UNITS_US='e'
+
+# TODO create a data type for units using this a constructor/setter
+#  for proper api doc and 
+def metric_or_us(units:str|None)->str:
+    """ simple switch from US to metric units by checking if units look like metric units 
+    if the unit specifier doesn't look like "metric" then use US units, because 
+    there could be many ways to specify US units.  
+    if it's blank then default is metric (because it should be metric!! )
+    
+    Args:
+        units (str or None): human useable spec for units.   see description but 'metric' or somethingelse
+        
+
+    Returns:
+        str: the short code used by NDFD API to specify units, which are defined by constants above
+        because the short code for US units is 'e' which I never would have guessed
+    """
+    
+
+    if not(units) or units.lower() in ['metric', 'scientific', 'm']:
+        unit_parameter_value = UNITS_METRIC
+    else:
+        unit_parameter_value = UNITS_US
+    
+    return unit_parameter_value
 
 
-
-def construct_ndfd_digital_forecast_url(lat, lon, begin=None, end=None):
+def construct_ndfd_digital_forecast_url(lat, lon, begin=None, end=None, units=UNITS_METRIC):
+    
     
     # dwml by default, not summarized 
     base_url = "https://digital.weather.gov/xml/sample_products/browser_interface/ndfdXMLclient.php"
@@ -34,27 +62,29 @@ def construct_ndfd_digital_forecast_url(lat, lon, begin=None, end=None):
     else:
         date_future = end
     
+    units_param_value = metric_or_us(units)
+    units_param = f"Unit={units_param_value}"
+    
     metrics = ['maxt', 'mint', 'rh', 'wspd', 'qpf']
     metrics_param = '&'.join([f"{m}={m}" for m in metrics])  # maxt=maxt&mint=mint...
     
-    forecast_params = f"Unit=m&lat={lat}&lon={lon}&product=time-series&begin={date_today}&end={date_future}&{metrics_param}"
+    forecast_params = f"Unit=m&lat={lat}&lon={lon}&product=time-series&begin={date_today}&end={date_future}&{metrics_param}&{units_param}"
     
     forecast_url = f"{base_url}?{forecast_params}"
     
     return forecast_url
 
-def request_ndfd_digital_forecast(lat, lon, user_agent = DEFAULT_USER_AGENT):
+def request_ndfd_digital_forecast(lat:float, lon:float, user_agent:str = DEFAULT_USER_AGENT, units:str='metric'):
     
     date_today =  date.today().isoformat() + "T00:00:00"
     date_future = '2030-04-20T00:00:00'  
     
-    forecast_url = construct_ndfd_digital_forecast_url(lat, lon, begin=date_today, end=date_future) # f"{base_url}?{forecast_params}"
+    forecast_url = construct_ndfd_digital_forecast_url(lat, lon, begin=date_today, end=date_future, units = units) # f"{base_url}?{forecast_params}"
     headers = {"User-Agent": user_agent}
     
     forecast_response = requests.get(forecast_url, headers=headers)
     return(forecast_response)
     
-  
 
 def get_start_end_times(root, time_layout_key):
     time_layouts = root.findall('.//time-layout')
@@ -105,12 +135,30 @@ def weather_metric_name_from_xml(root, metric_path):
     return f"{value_name} ({unit_name})"
     
     
-def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None, add_coordinates=True):
+def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None, add_coordinates=True, units=UNITS_METRIC):
+    """request a summary of daily forecast from NDFD reformat from XML format to CSV
+
+    Args:
+        lat (float): latitude
+        lon (float): longitude
+        hourly_weather (str, optional): . Defaults to None.
+        location_name (_type_, optional): if set, adds a column "location" with this value for use as a grouping column. Defaults to None.
+        add_coordinates (bool, optional): If true, add columns of the coordinates to each row of the output. Defaults to True.
+        units (str, optional): Use US or Metric units based on string sent Defaults to UNITS_METRIC which is 'm'.  
+            anything other than 'm' or 'metric' or blank/none will return US units.  See request_ndfd_digital_forecast() for details
+
+    Raises:
+        ValueError: if the value returned from the NDFD API is empty, there was a problem with input params. 
+        ValueError: if a metric (temperature, humidity) is request that's not valid, will return no data and raise error
+
+    Returns:
+        str : a string of data formatted as rows of CSV with headers in row 1, "lf" line endings
+    """
     
     ######
     # add hourly weather into df here for today
     # the way it's added depends on the metric and how that's stored in df from the xml
-    resp = request_ndfd_digital_forecast(lat, lon)
+    resp = request_ndfd_digital_forecast(lat=lat, lon=lon, units=units)
     # if resp has an error # note status code is always 200 even if params are invalid
     if "ERROR" in resp.text.upper():
         # extract error message from resp.text and put in raise msg
@@ -129,6 +177,28 @@ def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None
     
     metric_df_list = []
     
+    # max/min temps are already reported daily
+    metric_path = ".//temperature[@type='minimum']"
+    metric_name = weather_metric_name_from_xml(root, metric_path)
+    min_temperature_df = weather_metric_xml_to_df(root, metric_path)
+    metric_df_list.append( 
+        pd.DataFrame(
+            { 
+            f'{metric_name}': min_temperature_df.groupby('forecast_date')['value'].min()
+            }
+        )
+    )
+    
+    metric_path = ".//temperature[@type='maximum']"
+    metric_name = weather_metric_name_from_xml(root, metric_path)
+    max_temperature_df = weather_metric_xml_to_df(root, metric_path)
+    metric_df_list.append(    
+        pd.DataFrame(
+            { 
+            f'{metric_name}': max_temperature_df.groupby('forecast_date')['value'].max()  
+            }
+        )
+    )
 
     metric_path = './/humidity'
     
@@ -175,30 +245,6 @@ def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None
         )
     )
     del(metric_df)
-    
-
-    # max/min temps are already reported daily
-    metric_path = ".//temperature[@type='minimum']"
-    metric_name = weather_metric_name_from_xml(root, metric_path)
-    min_temperature_df = weather_metric_xml_to_df(root, metric_path)
-    metric_df_list.append( 
-        pd.DataFrame(
-            { 
-            f'{metric_name}': min_temperature_df.groupby('forecast_date')['value'].min()
-            }
-        )
-    )
-    
-    metric_path = ".//temperature[@type='maximum']"
-    metric_name = weather_metric_name_from_xml(root, metric_path)
-    max_temperature_df = weather_metric_xml_to_df(root, metric_path)
-    metric_df_list.append(    
-        pd.DataFrame(
-            { 
-            f'{metric_name}': max_temperature_df.groupby('forecast_date')['value'].max()  
-            }
-        )
-    )
     
     summary_df = pd.concat(metric_df_list, axis=1)    # [humidity_daily, min_temperature_daily, max_temperature_daily, windspeed_daily], axis=1)
 
@@ -253,6 +299,9 @@ def main():
     
     parser.add_argument("--location", type=str, default=None,
                       help="Optional value for Location column to key output, to enable combining with other locations")
+    
+    parser.add_argument("--units", type=str, default="m",
+                      help="Optional value to set requested units of observations, 'm', or 'metric'or anything else for  US")
 
     args = parser.parse_args()
 
@@ -260,7 +309,10 @@ def main():
     try:
         daily_forecast_df = daily_forecast_summary(lat=args.latitude, 
                                                    lon = args.longitude, 
-                                                   hourly_weather=None, location_name=args.location)
+                                                   hourly_weather=None, 
+                                                   location_name=args.location,
+                                                   units = args.units
+                                                   )
     except Exception as exc:
         print(f"Error retrieving forecast: {exc}", file=sys.stderr)
         sys.exit(2)

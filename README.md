@@ -137,13 +137,16 @@ print(daily_forecast_df)
 - `location_name` Optional value for Location column to key output, to enable combining with other locations
   This is useful if you are aggregating forecast data from multiple locations and need a location key column
 
+- `units` Optional string indicating units.  If not included, or blank, 'm' or 'metric' with any capitalization will use
+         Metric units for output and if any other string will use US units.  send 'us' or 'US' for example.   
+
 ### Command line interface (cli)
 
 the package installed a command line interface `ndfd_daily` that can be used get
 daily summaries NDFD forecast data for a specific location.  Example usage: 
 
 ```
- ndfd_daily --lat 42.7261 --lon -84.4833 --location LAN
+ ndfd_daily --lat 42.78 --lon -84.6 --location LAN --units US
 ``` 
 
 The parameters are named slightly differently for CLI usage for clarity (no abbreviations). 
@@ -165,6 +168,10 @@ See the parameters list above or use `ndfd_daily --help`
 -  --location LOCATION   
    Optional value for Location column to key output, to enable combining with other locations
    This is useful if you are aggregating forecast data from multiple locations and need a location key column
+
+-  --units us or metric Optional string indicating units.  If not included, or blank, 'm' or 'metric' with any capitalization
+      will use Metric units for output and if any other string will use US units.  send 'us' or 'US' for example.   
+
 
 ### Example Notebooks
 
