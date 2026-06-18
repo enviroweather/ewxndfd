@@ -114,6 +114,25 @@ print(daily_forecast_df)
 
 ```
 
+
+#### parameters:
+
+-  -h, --help            show this help message and exit
+
+-  --latitude LATITUDE, -lat LATITUDE
+   Latitude in decimal degrees (-90..90), for example 42.73 (required)
+
+-  --longitude LONGITUDE, -lon LONGITUDE
+   Longitude in integer decimal degrees (-180..180), for example -84.44 (required)
+
+-  --user-agent USER_AGENT
+    User-Agent header to send with requests, defaults to (enviroweather.msu.edu, ewx@enviroweather.msu.edu)
+    strongly suggested by the NDFD service to help them understand client base
+
+-  --location LOCATION   
+   Optional value for Location column to key output, to enable combining with other locations
+   This is useful if you are aggregating forecast data from multiple locations and need a location key column
+
 ### Command line interface (cli)
 
 the package installed a command line interface `ndfd_daily` that can be used get
@@ -122,6 +141,8 @@ daily summaries NDFD forecast data for a specific location.  Example usage:
 ```
  ndfd_daily --lat 42.7261 --lon -84.4833 --location-name LAN
 ``` 
+
+See the parameters list above or use `ndfd_daily --help`
 
 ### Example Notebooks
 
@@ -189,10 +210,13 @@ A example URL or API query that works with this service is:
 
 `https://digital.weather.gov/xml/sample_products/browser_interface/ndfdXMLclient.php?Unit=m&lat=42.73&lon=-84.55&product=time-series&maxt=maxt&mint=mint&rh=rh&wspd=wspd&qpf=qpf`
 
-which returns values in metric units for maximum temperature (maxt), minimum temperature (mint), relative humidity (rh), wind speed (wspd), and liquid precipitation (qpf) for the lat/lon coordinate 42.73, -84.55 from the current day for the time remaining to the end of the forecast period.
+which returns values in metric units for maximum temperature (maxt), minimum temperature (mint), relative humidity (rh), 
+wind speed (wspd), and liquid precipitation (qpf) for the lat/lon coordinate 42.73, -84.55 from the current day for the 
+time remaining to the end of the forecast period.
 
-Adding in historical dates does not return previous NDFD forecasts. this service only returns the latest forecast available.  Setting an end data is useful to limit the forecast period returned 
-to reduce the load on the servers, but this library always returns 7 days. 
+Adding in historical dates does not return previous NDFD forecasts. this service only returns the latest forecast 
+available.  Setting an end date in the API can limit the forecast period returned to reduce the load on federal servers, 
+but this python library doesn't use that and always returns 7 days. 
 
 
 
