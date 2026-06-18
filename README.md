@@ -125,7 +125,13 @@ print(daily_forecast_df)
 
 - `user_agent` User-Agent header to send with requests, defaults to (enviroweather.msu.edu, ewx@enviroweather.msu.edu)
    strongly suggested by the NDFD service to help them understand client base.  enter a value here
-   to override the default.   
+   to override the default. 
+
+   You can more consistently override this user agent (rather than including it in all commands) by setting
+   the environment variable `NDFD_USER_AGENT` to a string with the name and email in parenthesis, like 
+   `'(url, email)'`  If setting this variable with a shell command you may have to enclose in single quotes
+   so that the parenthesis are not interpreted by the shell, for example 
+   `export NDFD_USER_AGENT='(enviroweather.msu.edu, ewx@enviroweather.msu.edu)'`
 
 
 - `location_name` Optional value for Location column to key output, to enable combining with other locations

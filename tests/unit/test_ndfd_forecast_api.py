@@ -2,6 +2,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import datetime
+# this is used to be able to re-import to test config settings
+import importlib
+import ewxndfd.ndfd_forecast_api
 
 from ewxndfd import ndfd_forecast_api as ndfd
 
@@ -9,6 +12,17 @@ from ewxndfd import ndfd_forecast_api as ndfd
 def lat_lon():
     return ndfd.LANSING_LAT_LON
 
+def test_user_agent_from_env(monkeypatch):
+    """Test that we can set the user agent in the environment"""
+    
+    tmp_user_agent = "(nowhere.com, noboday@nowhere.com)"
+    monkeypatch.setenv("NDFD_USER_AGENT", tmp_user_agent )
+    
+    # since this config value is set at import time, re-import to get the new value
+    importlib.reload(ewxndfd.ndfd_forecast_api)
+    from ewxndfd.ndfd_forecast_api import DEFAULT_USER_AGENT
+    assert DEFAULT_USER_AGENT==tmp_user_agent
+    
 def test_construct_ndfd_url_includes_lat_lon_and_unit():
     lat, lon = ndfd.LANSING_LAT_LON
     url = ndfd.construct_ndfd_digital_forecast_url(lat, lon)
@@ -51,5 +65,4 @@ def test_daily_forecast_summary_using_sample_xml(lat_lon):
     
     first_relh = df.loc[1, "Maximum Relative Humidity (percent)"]
     assert is_numeric(first_relh)
-    
     

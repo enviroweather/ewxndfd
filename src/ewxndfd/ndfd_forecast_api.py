@@ -10,9 +10,10 @@ import argparse
 import sys
 from datetime import date # , timedelta, datetime
 
+from os import getenv
 
-
-DEFAULT_USER_AGENT = '(enviroweather.msu.edu, ewx@enviroweather.msu.edu)'
+# this is set a import time
+DEFAULT_USER_AGENT = getenv('NDFD_USER_AGENT', '(enviroweather.msu.edu, ewx@enviroweather.msu.edu)') 
 # for testing
 LANSING_LAT_LON = (42.73, -84.55)  # approximate lat/lon for Lansing, MI
 
