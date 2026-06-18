@@ -117,21 +117,19 @@ print(daily_forecast_df)
 
 #### parameters:
 
--  -h, --help            show this help message and exit
+- `lat` Latitude in decimal degrees (-90..90), for example 42.73 (required)
 
--  --latitude LATITUDE, -lat LATITUDE
-   Latitude in decimal degrees (-90..90), for example 42.73 (required)
+- `lon` Longitude in decimal degrees (-180..180), for example -84.44 (required)
 
--  --longitude LONGITUDE, -lon LONGITUDE
-   Longitude in integer decimal degrees (-180..180), for example -84.44 (required)
+- `hourly_weather` include hourly weather y/n, set to None to exclude all hourly data
 
--  --user-agent USER_AGENT
-    User-Agent header to send with requests, defaults to (enviroweather.msu.edu, ewx@enviroweather.msu.edu)
-    strongly suggested by the NDFD service to help them understand client base
+- `user_agent` User-Agent header to send with requests, defaults to (enviroweather.msu.edu, ewx@enviroweather.msu.edu)
+   strongly suggested by the NDFD service to help them understand client base.  enter a value here
+   to override the default.   
 
--  --location LOCATION   
-   Optional value for Location column to key output, to enable combining with other locations
-   This is useful if you are aggregating forecast data from multiple locations and need a location key column
+
+- `location_name` Optional value for Location column to key output, to enable combining with other locations
+  This is useful if you are aggregating forecast data from multiple locations and need a location key column
 
 ### Command line interface (cli)
 
@@ -139,10 +137,28 @@ the package installed a command line interface `ndfd_daily` that can be used get
 daily summaries NDFD forecast data for a specific location.  Example usage: 
 
 ```
- ndfd_daily --lat 42.7261 --lon -84.4833 --location-name LAN
+ ndfd_daily --lat 42.7261 --lon -84.4833 --location LAN
 ``` 
 
+The parameters are named slightly differently for CLI usage for clarity (no abbreviations). 
+
+
 See the parameters list above or use `ndfd_daily --help`
+
+-  --latitude LATITUDE, -lat LATITUDE
+   Latitude in decimal degrees (-90..90), for example 42.73 (required)
+
+-  --longitude LONGITUDE, -lon LONGITUDE
+   Longitude in decimal degrees (-180..180), for example -84.44 (required)
+
+-  --user-agent USER_AGENT
+    User-Agent header to send with requests, defaults to (enviroweather.msu.edu, ewx@enviroweather.msu.edu)
+    strongly suggested by the NDFD service to help them understand client base.  enter a value here
+    to override the default.   
+
+-  --location LOCATION   
+   Optional value for Location column to key output, to enable combining with other locations
+   This is useful if you are aggregating forecast data from multiple locations and need a location key column
 
 ### Example Notebooks
 
