@@ -28,7 +28,7 @@ HOURLY_NDFD_VARIABLE_TYPES = {
 
     
 class NDFD():
-    """small class for finding, reading, filtering, and transforming NDFD
+    """Enviroweather Only: small class for finding, reading, filtering, and transforming NDFD
     forecast csv data files
     """
     
@@ -69,7 +69,7 @@ class NDFD():
 
     @property
     def variable_type(self)->str:
-        """get the NDFD variable type for this object (read-only property)
+        """Enviroweather Only: get the NDFD variable type for this object (read-only property)
 
         Returns:
             str: NDFD variable type
@@ -88,7 +88,8 @@ class NDFD():
     
     @ndfd_dir.setter
     def ndfd_dir(self, ndfd_directory_path:str):
-        """set the full path to the NDFD directory for this variable type
+        """Enviroweather Only set the full path to the NDFD directory on Enviroweather
+        servers for this variable type
 
         Args:
             path (str): full path to the NDFD directory
@@ -100,13 +101,23 @@ class NDFD():
 
         
     def contstruct_file_name(self, date_forecast_created:date, hour_forecast_created:int)->str:
+        """Enviroweather only.  Create the file name for finding the previous version of 
+        forecast data.  The filename is created based on the date time it was pulled, not 
+        necessarily the date/hour it covers, and assume the cron job that pulls forecast data
+        is on time. 
+        
+        Args:
+            date_forecast_created (date) date as python date object
+            hour_forecast_created (int) hour the forecast file was created
+            
+        """
         d = date_forecast_created.strftime("%Y%m%d")
         h = str(hour_forecast_created).zfill(2)
         ndfd_filename = f"{self.variable_type}_{d}t{h}.csv"
         return(ndfd_filename)
                     
     def forecast_file_for_utc_datetime(self, utc_dt:datetime)->str:
-        """determine the NDFD forecast file that would be current for the given utc datetime   
+        """Enviroweather only.  Determine the NDFD forecast file that would be current for the given utc datetime   
         
         Args:
             utc_datetime (datetime): a utc datetime value     
@@ -133,7 +144,7 @@ class NDFD():
         return(ndfd_filename)
 
     def forecast_file_for_local_datetime(self, dt:datetime)->str:
-        """given any datetime in local timezone, construct NDFD forecast file 
+        """Enviroweather Only. given any datetime in local timezone, construct NDFD forecast file 
 
         Args:
             dt (datetime): local datetime, will be assigned local timezone if not timezone aware
@@ -146,7 +157,7 @@ class NDFD():
         return self.forecast_file_for_utc_datetime(utc_dt)  
     
     def recent_forecast_file(self)->str:
-        """determine the most recent NDFD forecast file based on current local time 
+        """Enviroweather only. determine the most recent NDFD forecast file based on current local time 
         Returns:
             str: full path to the NDFD forecast file for the current time
         """
@@ -156,7 +167,7 @@ class NDFD():
         return(forecast_file)
     
     def get_forecast(self, local_datetime:datetime=None, station_list:list=[])->list[dict]:
-        """read NDFD forecast data for the given local datetime.  If no datetime is provided,
+        """Enviroweather only.  Read NDFD forecast data for the given local datetime.  If no datetime is provided,
         use the current local datetime
 
         Args:
@@ -187,7 +198,7 @@ class NDFD():
     
     
     def _read(self, ndfd_file_path:str)->list[dict]:
-        """ read NDFD file into list of dicts   
+        """ Enviroweather Only. read NDFD file into list of dicts   
         Args:
             ndfd_file_path (str): full path to NDFD file
         Returns:
@@ -210,7 +221,7 @@ class NDFD():
     
         
     def _wide_to_long(self,ndfd_data:list[dict])->list:
-        """ convert NDFD format with one data per column for use with ETL processes"""
+        """Enviroweather Only. convert NDFD format with one data per column for use with ETL processes"""
         
         long_data = []
         
@@ -240,7 +251,7 @@ class NDFD():
     
     
     def filter_stations(self, station_list)->list:
-        """ filter NDFD data to only include stations in station_list """
+        """Enviroweather Only. filter NDFD data to only include stations in station_list """
 
         station_list = [s.strip() for s in station_list]
         
