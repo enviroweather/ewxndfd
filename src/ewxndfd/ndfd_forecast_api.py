@@ -6,10 +6,10 @@ summarize by day
 import requests
 import xml.etree.ElementTree as ET
 import pandas as pd
+from tabulate import tabulate
 import argparse
 import sys
 from datetime import date # , timedelta, datetime
-
 from os import getenv
 
 # configuration/constants
@@ -135,13 +135,13 @@ def weather_metric_name_from_xml(root, metric_path):
     return f"{value_name} ({unit_name})"
     
     
-def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None, add_coordinates=True, units=UNITS_METRIC):
+def daily_forecast_summary(lat:float, lon:float, hourly_weather:str|None = None, location_name:str|None = None, add_coordinates:bool=True, units:str=UNITS_METRIC)->pd.DataFrame:
     """request a summary of daily forecast from NDFD reformat from XML format to CSV
 
     Args:
         lat (float): latitude
         lon (float): longitude
-        hourly_weather (str, optional): . Defaults to None.
+        hourly_weather (str, optional): currently not used. Defaults to None.
         location_name (_type_, optional): if set, adds a column "location" with this value for use as a grouping column. Defaults to None.
         add_coordinates (bool, optional): If true, add columns of the coordinates to each row of the output. Defaults to True.
         units (str, optional): Use US or Metric units based on string sent Defaults to UNITS_METRIC which is 'm'.  
@@ -152,7 +152,7 @@ def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None
         ValueError: if a metric (temperature, humidity) is request that's not valid, will return no data and raise error
 
     Returns:
-        str : a string of data formatted as rows of CSV with headers in row 1, "lf" line endings
+        pd.DataFrame : a pandas dataframe of forecasted weather info, summarized by day for those available.  
     """
     
     ######
@@ -259,6 +259,28 @@ def daily_forecast_summary(lat, lon, hourly_weather = None, location_name = None
     
     return summary_df
 
+
+
+def table_format(forecast_df:pd.DataFrame, output_fmt:str = "csv")->str:    
+    
+    if not(output_fmt):
+        output_fmt = 'csv'
+    else:
+        output_fmt = output_fmt.lower()
+     
+    if output_fmt == 'csv':
+        output_table = forecast_df.to_csv(index=False)
+
+    elif output_fmt in ['markdown', 'md'] :  # aka markdown     
+        # special check for 'markdown' format to allow that since easier to remember 
+        # than github 
+        output_table = tabulate(forecast_df, headers='keys', showindex=False, tablefmt="github")
+    
+    else:
+        output_table = tabulate(forecast_df,  headers='keys', showindex=False, tablefmt=args.output)
+    
+    return(output_table)
+    
 def main():
     def _valid_lat(value: str) -> float:
         try:
@@ -322,20 +344,7 @@ def main():
         sys.exit(2)
 
     # which format?
-    from tabulate import tabulate
-
-    args.output = args.output.lower()  
-    
-    if not(args.output) or args.output == 'csv':
-            output_table = daily_forecast_df.to_csv(index=False)
-
-    elif args.output in ['markdown', 'md'] :  # aka markdown     
-        # special check for 'markdown' format to allow that since easier to remember 
-        # than github 
-        output_table = tabulate(daily_forecast_df, headers='keys', showindex=False, tablefmt="github")
-    
-    else:
-        output_table = tabulate(daily_forecast_df,  headers='keys', showindex=False, tablefmt=args.output)
+    output_table = table_format(daily_forecast_df)
         
     # print output to stdout
     print(output_table) 
