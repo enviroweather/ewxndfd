@@ -302,6 +302,10 @@ def main():
     
     parser.add_argument("--units", type=str, default="m",
                       help="Optional value to set requested units of observations, 'm', or 'metric'or anything else for  US")
+    
+    parser.add_argument("--output", type=str, default="csv", 
+                       help="""optional string indicating type of output default is CSV.  options are csv, 'markdown',
+    or any string format suppored by python tabulate https://github.com/astanin/python-tabulate#table-format""")
 
     args = parser.parse_args()
 
@@ -317,9 +321,25 @@ def main():
         print(f"Error retrieving forecast: {exc}", file=sys.stderr)
         sys.exit(2)
 
-    # print CSV to stdout
-    print(daily_forecast_df.to_csv(index=False))
+    # which format?
+    from tabulate import tabulate
+
+    args.output = args.output.lower()  
     
+    if not(args.output) or args.output == 'csv':
+            output_table = daily_forecast_df.to_csv(index=False)
+
+    elif args.output in ['markdown', 'md'] :  # aka markdown     
+        # special check for 'markdown' format to allow that since easier to remember 
+        # than github 
+        output_table = tabulate(daily_forecast_df, headers='keys', showindex=False, tablefmt="github")
+    
+    else:
+        output_table = tabulate(daily_forecast_df,  headers='keys', showindex=False, tablefmt=args.output)
+        
+    # print output to stdout
+    print(output_table) 
+       
 if __name__ == "__main__":
     main()
 
