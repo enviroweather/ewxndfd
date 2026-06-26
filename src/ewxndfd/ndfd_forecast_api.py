@@ -12,6 +12,8 @@ import sys
 from datetime import date # , timedelta, datetime
 from os import getenv
 
+PKG_VERSION="202606261745"
+
 # configuration/constants
 # this is set a import time
 DEFAULT_USER_AGENT = getenv('NDFD_USER_AGENT', '(enviroweather.msu.edu, ewx@enviroweather.msu.edu)') 
@@ -88,6 +90,7 @@ def request_ndfd_digital_forecast(lat:float, lon:float, user_agent:str = DEFAULT
 
 def get_start_end_times(root, time_layout_key):
     time_layouts = root.findall('.//time-layout')
+    # only way to find what we want is to loop through all and find a match..?
     for tl in time_layouts:
         layout_key = tl.find('layout-key').text
         if layout_key == time_layout_key:
@@ -96,6 +99,14 @@ def get_start_end_times(root, time_layout_key):
             return (start_times, end_times)
     return ()
 
+def get_end_times(root, time_layout_key):
+    time_layouts = root.findall('.//time-layout')
+    for tl in time_layouts:
+        layout_key = tl.find('layout-key').text
+        if layout_key == time_layout_key:
+            start_times = [st.text for st in tl.findall('end-valid-time')]
+            return start_times
+    return []
 
 def get_start_times(root, time_layout_key):
     time_layouts = root.findall('.//time-layout')
@@ -106,27 +117,57 @@ def get_start_times(root, time_layout_key):
             return start_times
     return []
 
+#################################
+## TODO !!! using the start times is a problem b/c the startime of low temp is the 
+# day before today if it's early in the morning  for min temp. 
+# that convert the date for min temp to yesterday, which is incorrect! 
+# this may NOT be true for max temps or other things. 
+# need to run the test in ndfd_api.ipynb to see what the start/end times look like
+# OR figure out a better way to get the date from these for converting to  day 
+def weather_metric_xml_to_df(root, metric_path:str)->pd.DataFrame:
+    """create a date frame for single daily forecast value and date 
+    by pulling data from the XML.  The valid times are a range (which
+    must be looked up in the XML), so use the 'end' datime for 
+    determining the 'date' of the forecast (since they sometimes start
+    the day before, e.g. min temp).  sometimes the time window for a 
+    forecast has gone by for min temp, so there is no forecast - it's assumed
+    the value is now known.  in that case add a row with an NA value for today
+    so it's consistent with other values for combining
 
-def weather_metric_xml_to_df(root, metric_path):
+    Args:
+        root (ElementTree something): a 'root' object from ElementTree library, XML data
+        metric_path (str): the XML path search value to find the observation we want
+    Returns:
+        pd.DataFrame: a data frame of 7 daily forecast values including today
+    """
     
+    print('using end times')
     weather_values = root.find(metric_path)
     time_layout_key = weather_values.get('time-layout')
-    #start_times, end_times = get_start_end_times(root, time_layout_key)
-    start_times = get_start_times(root, time_layout_key)
+    start_times, end_times = get_start_end_times(root, time_layout_key)
     values = [v.text for v in weather_values.findall('value')]
     
     df = pd.DataFrame(
         {
-            'forecast_time': start_times,
-            # 'end_time': end_times,
+            'end_time': end_times,
             'value': values
         }
     )
     
-    df['forecast_date'] = pd.to_datetime(df['forecast_time']).dt.date
-    # df['end_date'] = pd.to_datetime(df['end_time']).dt.date
+    df['forecast_date'] = pd.to_datetime(df['end_time']).dt.date
     df['value'] = pd.to_numeric(df['value'], errors='coerce')
-    return df
+    
+    # sometimes there is no forecast value for today, eig past time for min temp
+    # if no value for today, then add a row with NA value
+    if(not ( min(df['forecast_date']))==date.today()):
+        # add to the end
+        df.loc[len(df)] = {'end_time': None, 'value' : None, 'forecast_date': date.today()}
+        # reorder and clean up index for merging with other values
+        df = df.sort_values('forecast_date').reset_index(drop=True)
+        
+    
+    # use the new <NA> types instead of numpy NaN    
+    return pd.DataFrame.convert_dtypes(df.convert_dtypes())
 
 def weather_metric_name_from_xml(root, metric_path):
     weather_values = root.find(metric_path)
