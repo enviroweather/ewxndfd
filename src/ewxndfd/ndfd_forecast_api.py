@@ -2,6 +2,10 @@
 """methods to get unsummarized/ detailed forecast from the NDFD XML api and 
 summarize by day
 """
+DEBUG=True
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 import requests
 import xml.etree.ElementTree as ET
@@ -141,32 +145,42 @@ def weather_metric_xml_to_df(root, metric_path:str)->pd.DataFrame:
         pd.DataFrame: a data frame of 7 daily forecast values including today
     """
     
-    print('using end times')
+    logging.debug(f"extracting {metric_path} into df")
+
     weather_values = root.find(metric_path)
     time_layout_key = weather_values.get('time-layout')
     start_times, end_times = get_start_end_times(root, time_layout_key)
+    
+    # pick the time to use for the forecast data
+    # end_time is best for temps, but relh only has start time
+    # so start with end time and if blank, fall back to start times
+    forecast_times = end_times
+    if  forecast_times == []:
+          forecast_times = start_times
     values = [v.text for v in weather_values.findall('value')]
     
     df = pd.DataFrame(
         {
-            'end_time': end_times,
+            'forecast_time': forecast_times,
             'value': values
         }
     )
     
-    df['forecast_date'] = pd.to_datetime(df['end_time']).dt.date
+    df['forecast_date'] = pd.to_datetime(df['forecast_time']).dt.date
     df['value'] = pd.to_numeric(df['value'], errors='coerce')
     
     # sometimes there is no forecast value for today, eig past time for min temp
     # if no value for today, then add a row with NA value
     if(not ( min(df['forecast_date']))==date.today()):
         # add to the end
-        df.loc[len(df)] = {'end_time': None, 'value' : None, 'forecast_date': date.today()}
+        df.loc[len(df)] = {'forecast_time': None, 'value' : None, 'forecast_date': date.today()}
         # reorder and clean up index for merging with other values
         df = df.sort_values('forecast_date').reset_index(drop=True)
         
     
-    # use the new <NA> types instead of numpy NaN    
+    # use the new <NA> types instead of numpy NaN   
+    df_len = len(df)
+    logging.debug(f"data frame {df_len} rows") 
     return pd.DataFrame.convert_dtypes(df.convert_dtypes())
 
 def weather_metric_name_from_xml(root, metric_path):
@@ -285,8 +299,10 @@ def daily_forecast_summary(lat:float, lon:float, hourly_weather:str|None = None,
         }
         )
     )
+    
     del(metric_df)
     
+    logging.debug("combining dfs")
     summary_df = pd.concat(metric_df_list, axis=1)    # [humidity_daily, min_temperature_daily, max_temperature_daily, windspeed_daily], axis=1)
 
     if add_coordinates:
@@ -381,7 +397,7 @@ def main():
                                                    units = args.units
                                                    )
     except Exception as exc:
-        print(f"Error retrieving forecast: {exc}", file=sys.stderr)
+        logging.error(f"Error retrieving forecast: {exc}", file=sys.stderr)
         sys.exit(2)
 
     # which format?
