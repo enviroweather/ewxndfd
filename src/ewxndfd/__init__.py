@@ -23,3 +23,11 @@
 
 """
 """
+from os import getenv
+DEBUG=True
+DEBUG = getenv("DEBUG", DEBUG)
+LOGLEVEL = logging.DEBUG if DEBUG else logging.INFO 
+
+import logging
+logging.basicConfig(level=LOGLEVEL)
+PKG_VERSION="20260629"

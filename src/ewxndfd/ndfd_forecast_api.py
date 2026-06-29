@@ -2,21 +2,16 @@
 """methods to get unsummarized/ detailed forecast from the NDFD XML api and 
 summarize by day
 """
-DEBUG=True
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-
 import requests
 import xml.etree.ElementTree as ET
 import pandas as pd
-from tabulate import tabulate
+from tabulate import tabulate, tabulate_formats
 import argparse
 import sys
 from datetime import date # , timedelta, datetime
 from os import getenv
-
-PKG_VERSION="202606261745"
 
 # configuration/constants
 # this is set a import time
@@ -172,9 +167,9 @@ def weather_metric_xml_to_df(root, metric_path:str)->pd.DataFrame:
     # sometimes there is no forecast value for today, eig past time for min temp
     # if no value for today, then add a row with NA value
     if(not ( min(df['forecast_date']))==date.today()):
-        # add to the end
+        # no forecast for today, add new empty for today's datato the end with null values
         df.loc[len(df)] = {'forecast_time': None, 'value' : None, 'forecast_date': date.today()}
-        # reorder and clean up index for merging with other values
+        # then reorder to put that at the beginning and clean up index for merging with other values
         df = df.sort_values('forecast_date').reset_index(drop=True)
         
     
@@ -319,22 +314,26 @@ def daily_forecast_summary(lat:float, lon:float, hourly_weather:str|None = None,
 
 
 def table_format(forecast_df:pd.DataFrame, output_fmt:str = "csv")->str:    
-    
-    if not(output_fmt):
-        output_fmt = 'csv'
-    else:
-        output_fmt = output_fmt.lower()
-     
-    if output_fmt == 'csv':
-        output_table = forecast_df.to_csv(index=False)
+    available_output_formats = list(tabulate_formats)
+    available_output_formats.append('markdown')
 
-    elif output_fmt in ['markdown', 'md'] :  # aka markdown     
-        # special check for 'markdown' format to allow that since easier to remember 
-        # than github 
-        output_table = tabulate(forecast_df, headers='keys', showindex=False, tablefmt="github")
+    if not(output_fmt):
+        logging.debug("no outputformat provided, using csv")
+        output_fmt = 'csv'
     
+    output_fmt = output_fmt.lower()     
+    
+    if output_fmt not in available_output_formats:
+        logging.info(f"{output_fmt} not recognized, using csv")
+        output_fmt = 'csv'
+        
+    if output_fmt in ['markdown'] :   
+        output_fmt = 'github'  #this is the alias tabulate uses for markdown
+    
+    if output_fmt == 'csv':
+        output_table = forecast_df.to_csv(index=False)        
     else:
-        output_table = tabulate(forecast_df,  headers='keys', showindex=False, tablefmt=args.output)
+        output_table = tabulate(forecast_df,  headers='keys', showindex=False, tablefmt=output_fmt)
     
     return(output_table)
     
@@ -379,10 +378,10 @@ def main():
     parser.add_argument("--location", type=str, default=None,
                       help="Optional value for Location column to key output, to enable combining with other locations")
     
-    parser.add_argument("--units", type=str, default="m",
+    parser.add_argument("--units", "-u", type=str, default="m",
                       help="Optional value to set requested units of observations, 'm', or 'metric'or anything else for  US")
     
-    parser.add_argument("--output", type=str, default="csv", 
+    parser.add_argument("--output", "-o", type=str, default="csv", 
                        help="""optional string indicating type of output default is CSV.  options are csv, 'markdown',
     or any string format suppored by python tabulate https://github.com/astanin/python-tabulate#table-format""")
 
@@ -397,11 +396,11 @@ def main():
                                                    units = args.units
                                                    )
     except Exception as exc:
-        logging.error(f"Error retrieving forecast: {exc}", file=sys.stderr)
+        logging.error(f"Error retrieving forecast: {exc}")
         sys.exit(2)
 
     # which format?
-    output_table = table_format(daily_forecast_df)
+    output_table = table_format(forecast_df = daily_forecast_df, output_fmt = args.output)
         
     # print output to stdout
     print(output_table) 
