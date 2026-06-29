@@ -4,6 +4,9 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 import os   
 
+import logging
+
+
 FIXTURE_DIR = Path(os.path.dirname(os.path.realpath(__file__))).parent  / 'ndfd_sample_files'
 
 @pytest.fixture

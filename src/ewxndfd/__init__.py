@@ -21,13 +21,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-"""
-from os import getenv
-DEBUG=True
-DEBUG = getenv("DEBUG", DEBUG)
-LOGLEVEL = logging.DEBUG if DEBUG else logging.INFO 
+"""Package initialization for ewxndfd."""
 
 import logging
-logging.basicConfig(level=LOGLEVEL)
-PKG_VERSION="20260629"
+from os import getenv
+
+
+PKG_VERSION = "20260629"
+DEBUG_DEFAULT = False
+
+
+def _env_to_bool(value: str | bool | None) -> bool:
+    """Normalize env-style values to a boolean."""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _configure_logging() -> None:
+    """Configure root logging once; default stream is stderr."""
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        return
+
+    debug_enabled = _env_to_bool(getenv("DEBUG", str(DEBUG_DEFAULT)))
+    log_level = logging.DEBUG if debug_enabled else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+
+_configure_logging()
+logger = logging.getLogger(__name__)

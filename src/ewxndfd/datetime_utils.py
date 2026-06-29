@@ -2,6 +2,8 @@
 
 from datetime import timezone, datetime, date, timedelta
 from zoneinfo import ZoneInfo
+import logging
+logger = logging.getLogger(__name__)
 
 DEFAULT_TZ = "US/Eastern"
 

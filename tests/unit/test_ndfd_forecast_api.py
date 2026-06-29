@@ -5,8 +5,10 @@ import datetime
 # this is used to be able to re-import to test config settings
 import importlib
 import ewxndfd.ndfd_forecast_api
-
 from ewxndfd import ndfd_forecast_api as ndfd
+import logging
+logger = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def lat_lon():
@@ -64,8 +66,14 @@ def test_units_parameter(lat_lon):
             ]
     
     for temp_column in temperature_columns:
-        temp_metric = float(df_metric.loc[0,temp_column[0]])
-        temp_us = float(df_us.loc[0,temp_column[1]])
+        temp_metric_series = df_metric[temp_column[0]].dropna()
+        temp_us_series = df_us[temp_column[1]].dropna()
+
+        assert not temp_metric_series.empty
+        assert not temp_us_series.empty
+
+        temp_metric = float(temp_metric_series.iloc[0])
+        temp_us = float(temp_us_series.iloc[0])
     
         assert isinstance(temp_metric, float)
         assert isinstance(temp_us, float)

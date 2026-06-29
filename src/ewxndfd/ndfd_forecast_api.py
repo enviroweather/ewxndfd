@@ -3,7 +3,6 @@
 summarize by day
 """
 
-import logging
 import requests
 import xml.etree.ElementTree as ET
 import pandas as pd
@@ -12,6 +11,32 @@ import argparse
 import sys
 from datetime import date # , timedelta, datetime
 from os import getenv
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+def _env_to_bool(value: str | bool | None) -> bool:
+    """Normalize env-style values to boolean."""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _configure_cli_logging() -> None:
+    """Configure root logging for CLI execution when no handlers exist."""
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        return
+
+    debug_enabled = _env_to_bool(getenv("DEBUG"))
+    log_level = logging.DEBUG if debug_enabled else logging.WARNING
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
 # configuration/constants
 # this is set a import time
@@ -140,7 +165,7 @@ def weather_metric_xml_to_df(root, metric_path:str)->pd.DataFrame:
         pd.DataFrame: a data frame of 7 daily forecast values including today
     """
     
-    logging.debug(f"extracting {metric_path} into df")
+    logger.debug(f"extracting {metric_path} into df")
 
     weather_values = root.find(metric_path)
     time_layout_key = weather_values.get('time-layout')
@@ -175,7 +200,7 @@ def weather_metric_xml_to_df(root, metric_path:str)->pd.DataFrame:
     
     # use the new <NA> types instead of numpy NaN   
     df_len = len(df)
-    logging.debug(f"data frame {df_len} rows") 
+    logger.debug(f"data frame {df_len} rows") 
     return pd.DataFrame.convert_dtypes(df.convert_dtypes())
 
 def weather_metric_name_from_xml(root, metric_path):
@@ -297,7 +322,7 @@ def daily_forecast_summary(lat:float, lon:float, hourly_weather:str|None = None,
     
     del(metric_df)
     
-    logging.debug("combining dfs")
+    logger.debug("combining dfs")
     summary_df = pd.concat(metric_df_list, axis=1)    # [humidity_daily, min_temperature_daily, max_temperature_daily, windspeed_daily], axis=1)
 
     if add_coordinates:
@@ -318,13 +343,13 @@ def table_format(forecast_df:pd.DataFrame, output_fmt:str = "csv")->str:
     available_output_formats.append('markdown')
 
     if not(output_fmt):
-        logging.debug("no outputformat provided, using csv")
+        logger.debug("no outputformat provided, using csv")
         output_fmt = 'csv'
     
     output_fmt = output_fmt.lower()     
     
     if output_fmt not in available_output_formats:
-        logging.info(f"{output_fmt} not recognized, using csv")
+        logger.warning(f"{output_fmt} not recognized, using csv")
         output_fmt = 'csv'
         
     if output_fmt in ['markdown'] :   
@@ -338,6 +363,8 @@ def table_format(forecast_df:pd.DataFrame, output_fmt:str = "csv")->str:
     return(output_table)
     
 def main():
+    _configure_cli_logging()
+
     def _valid_lat(value: str) -> float:
         try:
             v = float(value)
@@ -396,7 +423,7 @@ def main():
                                                    units = args.units
                                                    )
     except Exception as exc:
-        logging.error(f"Error retrieving forecast: {exc}")
+        logger.error(f"Error retrieving forecast: {exc}")
         sys.exit(2)
 
     # which format?
