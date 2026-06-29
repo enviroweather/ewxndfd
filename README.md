@@ -22,18 +22,35 @@ agricultural community.
 The main output of this package is a daily forecast table in the form, for example
 from the command `ndfd_daily -lat 42.73 -lon -84.44 --location LAN`
 
-(note currently there is a bug for first/last day min/max temperature )
+### Notes for "daily forecast"
 
-| forecast_date   |   Daily Minimum Temperature (Fahrenheit) |   Daily Maximum Temperature (Fahrenheit) |   Maximum Relative Humidity (percent) |   Minimum Relative Humidity (percent) |   Total Liquid Precipitation Amount (inches) |   latitude |   longitude |
+The application this was written for uses "daily forecasts."  This can be tricky for the current day, since part of the 
+day has alreay passed 
+
+- if the forecast period has past for a value (for example NWS does not forecast low temp after 9am) then 
+it's assumed the value is 'known' for that day and not included in this forecast, and output will include Pandas <NA>
+or empty string for CSV output.  When using this data for building complete forecast daily values, replace those missing
+values with the currently observed values (min temp and max temp)
+- some forecast data (max/min relative humidity, precipidation amount) is hourly and currently these are aggegrated to 
+  create a forecast.  Hence for today, these are for the remainder of the day only and not a true daily forecast. 
+  To get a true daily forecast for today, you will need to augment these values with your observations for midnight to 
+  the current timem (for example, for daily maximum relative humidity take the max of t(msc observeredd relh so far, forecast max relh)) 
+
+### Example output:
+
+US Units for mid-michigan 29-Jun-2026 3:45pm: 
+
+`python src/ewxndfd/ndfd_forecast_api.py --lat 42.78 --lon -84.6 -u u -o markdown`
+
+| forecast_date   | Daily Minimum Temperature (Fahrenheit)   |   Daily Maximum Temperature (Fahrenheit) |   Maximum Relative Humidity (percent) |   Minimum Relative Humidity (percent) | Total Liquid Precipitation Amount (inches)   |   latitude |   longitude |
 |-----------------|------------------------------------------|------------------------------------------|---------------------------------------|---------------------------------------|----------------------------------------------|------------|-------------|
-| 2026-06-18      |                                       55 |                                       69 |                                    75 |                                    54 |                                         0    |      42.78 |       -84.6 |
-| 2026-06-19      |                                       53 |                                       73 |                                    93 |                                    43 |                                         0    |      42.78 |       -84.6 |
-| 2026-06-20      |                                       53 |                                       75 |                                    90 |                                    51 |                                         0    |      42.78 |       -84.6 |
-| 2026-06-21      |                                       55 |                                       75 |                                    93 |                                    51 |                                         0.08 |      42.78 |       -84.6 |
-| 2026-06-22      |                                       53 |                                       75 |                                    89 |                                    55 |                                       nan    |      42.78 |       -84.6 |
-| 2026-06-23      |                                       55 |                                       77 |                                    87 |                                    52 |                                       nan    |      42.78 |       -84.6 |
-| 2026-06-24      |                                       55 |                                       75 |                                    87 |                                    57 |                                       nan    |      42.78 |       -84.6 |
-| 2026-06-25      |                                      nan |                                       77 |                                    90 |                                    58 |                                       nan    |      42.78 |       -84.6 |
+| 2026-06-29      | <NA>                                     |                                       93 |                                    79 |                                    54 | 0                                            |      42.78 |       -84.6 |
+| 2026-06-30      | 75                                       |                                       95 |                                    93 |                                    49 | 0                                            |      42.78 |       -84.6 |
+| 2026-07-01      | 75                                       |                                       96 |                                    85 |                                    43 | 0                                            |      42.78 |       -84.6 |
+| 2026-07-02      | 75                                       |                                       96 |                                    79 |                                    49 | 0                                            |      42.78 |       -84.6 |
+| 2026-07-03      | 73                                       |                                       91 |                                    87 |                                    57 | <NA>                                         |      42.78 |       -84.6 |
+| 2026-07-04      | 69                                       |                                       89 |                                    93 |                                    59 | <NA>                                         |      42.78 |       -84.6 |
+| 2026-07-05      | 68                                       |                                       87 |                                    97 |                                    59 | <NA>                                         |      42.78 |       -84.6 |
 
 
 ## Get started with the package
@@ -170,7 +187,11 @@ See the parameters list above or use `ndfd_daily --help`
    This is useful if you are aggregating forecast data from multiple locations and need a location key column
 
 -  --units us or metric Optional string indicating units.  If not included, or blank, 'm' or 'metric' with any capitalization
-      will use Metric units for output and if any other string will use US units.  send 'us' or 'US' for example.   
+      will use Metric units for output and if any other string will use US units.  send 'us' or 'US' for example.
+
+-  --output Optional string indicating which style to output data.  Default is CSV (comma separated), can use 'markdown'
+      for format that can be put into markdown documents, or any string formats suppored by python tabulate
+      https://github.com/astanin/python-tabulate#table-format 
 
 
 ### Example Notebooks
